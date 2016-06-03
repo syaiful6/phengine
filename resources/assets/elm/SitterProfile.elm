@@ -8,7 +8,7 @@ import Http
 
 main =
   Html.program
-    { init = init "any"
+    { init = init
     , view = view
     , update = update
     , subscriptions = subscriptions
@@ -45,10 +45,10 @@ emptyModel =
   , availableWeekDays = -1
   , availableWeekEnds = -1}
 
-init : String -> (Model, Cmd Msg)
-init state =
+init : (Model, Cmd Msg)
+init =
   ( emptyModel
-  , fetchCity state
+  , fetchState
   )
 
 -- update stuff
@@ -57,8 +57,13 @@ type Msg
   | ZipCode String
   | MobilePhone String
   | UpdateCity String
+  | SelectedState String
+  | SelectedCity String
   | UpdateCitySuccess (List City)
   | UpdateCityFail Http.Error
+  | FetchState
+  | FetchStateSuccess (List State)
+  | FetchStateFail Http.Error
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -79,14 +84,32 @@ update msg model =
       (model, fetchCity state)
 
     UpdateCitySuccess newCities ->
-      (model, Cmd.none)
+      { model | cities = newCities }
+        ! [Cmd.none]
 
     UpdateCityFail _ ->
-      (emptyModel, Cmd.none)
+      (model, Cmd.none)
+
+    FetchState ->
+      (model, fetchState)
+
+    FetchStateSuccess newStates ->
+      { model | states = newStates}
+        ! [Cmd.none]
+
+    FetchStateFail _ ->
+      (model, Cmd.none)
 
 fetchCity : String -> Cmd Msg
 fetchCity state =
   Task.perform UpdateCityFail UpdateCitySuccess (fetchCity' state)
+
+fetchState : Cmd Msg
+fetchState =
+  let
+    get = Http.get (Json.Decode.list decodeState) "/api/states/"
+  in
+    Task.perform FetchStateFail FetchStateSuccess get
 
 fetchCity' : String -> Task.Task Http.Error (List City)
 fetchCity' state =
@@ -101,13 +124,33 @@ decodeCity =
     ("code" := Json.Decode.string)
     ("name" := Json.Decode.string)
 
+decodeState : Json.Decode.Decoder State
+decodeState =
+  Json.Decode.object2 State
+    ("name" := Json.Decode.string)
+    ("code" := Json.Decode.string)
+
+-- utility for bootstrap styling
+inputAttr =
+  attribute "class" "form-control"
+
+stateItem state =
+  option [ ] [ text state.name ]
+
+--
+selectedAtribute =
+  let
+    targetId = Json.Decode.at ["target", "selectedIndex"] Json.Decode.string
+  in
+    on "change" targetId
+
 -- view
 view : Model -> Html Msg
 view model =
   div []
-    [ input [ type' "text", placeholder "Address", onInput Address ] []
-    , input [ type' "text", placeholder "ZipCode", onInput ZipCode ] []
-    , select [ onInput UpdateCity ] []
+    [ input [ type' "text", inputAttr, placeholder "Address", onInput Address ] []
+    , input [ type' "text", inputAttr, placeholder "ZipCode", onInput ZipCode ] []
+    , select [ onInput UpdateCity ] (List.map stateItem model.states)
     ]
 
 subscriptions : Model -> Sub Msg
