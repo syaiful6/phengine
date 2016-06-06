@@ -14,7 +14,7 @@ class CreateSitterProfiles extends Migration
     {
         Schema::create('sitter_profiles', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('user_id');
+            $table->integer('user_id')->index();
             $table->text('image');
             $table->string('address', 200);
             $table->string('zip', 100);

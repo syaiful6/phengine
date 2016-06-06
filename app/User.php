@@ -23,4 +23,12 @@ class User extends Authenticatable
     protected $hidden = [
         'password', 'remember_token', 'is_superuser', 'is_staff'
     ];
+
+    /**
+     *
+     */
+    public function sitterProfile()
+    {
+        return $this->hasOne(SitterProfile::class)
+    }
 }

@@ -30,7 +30,9 @@ type alias Model =
   , zipCode : String
   , mobilePhone : String
   , states : List State
+  , state : String
   , cities : List City
+  , city : String
   , availableWeekDays : Int
   , availableWeekEnds : Int
   }
@@ -40,7 +42,9 @@ emptyModel =
   {address = ""
   , zipCode = ""
   , mobilePhone = ""
+  , state = ""
   , states = []
+  , city = ""
   , cities = []
   , availableWeekDays = -1
   , availableWeekEnds = -1}
@@ -57,7 +61,6 @@ type Msg
   | ZipCode String
   | MobilePhone String
   | UpdateCity String
-  | SelectedState String
   | SelectedCity String
   | UpdateCitySuccess (List City)
   | UpdateCityFail Http.Error
@@ -81,7 +84,12 @@ update msg model =
         ! []
 
     UpdateCity state ->
-      (model, fetchCity state)
+      { model | state = state }
+        ! [fetchCity state]
+
+    SelectedCity city ->
+      { model | city = city}
+        ! []
 
     UpdateCitySuccess newCities ->
       { model | cities = newCities }
@@ -107,14 +115,14 @@ fetchCity state =
 fetchState : Cmd Msg
 fetchState =
   let
-    get = Http.get (Json.Decode.list decodeState) "/api/states/"
+    get = Http.get (Json.Decode.list decodeState) "/v0.1/api/states/"
   in
     Task.perform FetchStateFail FetchStateSuccess get
 
 fetchCity' : String -> Task.Task Http.Error (List City)
 fetchCity' state =
   let
-    url = "/cities/" ++ state
+    url = "/v0.1/api/cities/" ++ state
   in
     Http.get (Json.Decode.list decodeCity) url
 
@@ -134,8 +142,8 @@ decodeState =
 inputAttr =
   attribute "class" "form-control"
 
-stateItem state =
-  option [ ] [ text state.name ]
+selectOption opt =
+  option [ ] [ text opt.name ]
 
 --
 selectedAtribute =
@@ -150,7 +158,9 @@ view model =
   div []
     [ input [ type' "text", inputAttr, placeholder "Address", onInput Address ] []
     , input [ type' "text", inputAttr, placeholder "ZipCode", onInput ZipCode ] []
-    , select [ onInput UpdateCity ] (List.map stateItem model.states)
+    , input [ type' "text", inputAttr, placeholder "MobilePhone", onInput MobilePhone ] []
+    , select [ inputAttr, onInput UpdateCity] (List.map selectOption model.states)
+    , select [ inputAttr, onInput UpdateCity] (List.map selectOption model.cities)
     ]
 
 subscriptions : Model -> Sub Msg
